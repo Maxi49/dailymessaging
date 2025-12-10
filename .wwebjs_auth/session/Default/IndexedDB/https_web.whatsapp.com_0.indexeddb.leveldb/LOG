@@ -1,0 +1,25 @@
+2025/12/10-19:16:42.936 79d0 Reusing MANIFEST C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/10-19:16:42.938 79d0 Recovering log #196
+2025/12/10-19:16:42.944 79d0 Reusing old log C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000196.log 
+2025/12/10-19:16:47.414 1d48 Level-0 table #207: started
+2025/12/10-19:16:47.439 1d48 Level-0 table #207: 65052 bytes OK
+2025/12/10-19:16:47.440 1d48 Delete type=0 #196
+2025/12/10-19:16:47.440 1d48 Manual compaction at level-0 from '\x00\x1c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1d\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/12/10-19:16:47.464 7160 Compacting 1@1 + 7@2 files
+2025/12/10-19:16:47.512 7160 Generated table #208@1: 48256 keys, 2228352 bytes
+2025/12/10-19:16:47.545 7160 Generated table #209@1: 15505 keys, 2180483 bytes
+2025/12/10-19:16:47.576 7160 Generated table #210@1: 2716 keys, 2155507 bytes
+2025/12/10-19:16:47.605 7160 Generated table #211@1: 3316 keys, 2155834 bytes
+2025/12/10-19:16:47.637 7160 Generated table #212@1: 12035 keys, 2173358 bytes
+2025/12/10-19:16:47.684 7160 Generated table #213@1: 28405 keys, 2264999 bytes
+2025/12/10-19:16:47.731 7160 Generated table #214@1: 54904 keys, 1890938 bytes
+2025/12/10-19:16:47.731 7160 Compacted 1@1 + 7@2 files => 15049471 bytes
+2025/12/10-19:16:47.733 7160 compacted to: files[ 0 0 7 0 0 0 0 ]
+2025/12/10-19:16:47.734 7160 Delete type=2 #198
+2025/12/10-19:16:47.734 7160 Delete type=2 #199
+2025/12/10-19:16:47.734 7160 Delete type=2 #200
+2025/12/10-19:16:47.734 7160 Delete type=2 #201
+2025/12/10-19:16:47.734 7160 Delete type=2 #202
+2025/12/10-19:16:47.734 7160 Delete type=2 #203
+2025/12/10-19:16:47.734 7160 Delete type=2 #204
+2025/12/10-19:16:47.734 7160 Delete type=2 #207
