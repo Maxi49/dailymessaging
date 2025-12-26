@@ -1,5 +1,6 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+require('dotenv').config();
 
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -17,7 +18,8 @@ async function connectToWhatsApp() {
     // Pedir pairing code solo cuando se conecta y no está registrado
     if (qr && !sock.authState.creds.registered) {
       try {
-        const phoneNumber = process.env.MY_PHONE_NUMBER; // +5493512345678
+        const phoneNumber = process.env.MY_PHONE_NUMBER;
+        console.log('Generando código de vinculación para el número:', phoneNumber); 
         const code = await sock.requestPairingCode(phoneNumber);
         console.log('='.repeat(50));
         console.log(`CÓDIGO DE VINCULACIÓN: ${code}`);
