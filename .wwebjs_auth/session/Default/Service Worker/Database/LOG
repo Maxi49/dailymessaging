@@ -1,3 +1,2 @@
-2025/12/10-19:16:42.445 681c Reusing MANIFEST C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\Service Worker\Database/MANIFEST-000001
-2025/12/10-19:16:42.446 681c Recovering log #3
-2025/12/10-19:16:42.446 681c Reusing old log C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\Service Worker\Database/000003.log 
+2025/12/25-22:53:32.246 e28 Creating DB C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\Service Worker\Database since it was missing.
+2025/12/25-22:53:32.251 e28 Reusing MANIFEST C:\Users\gimen\OneDrive\Escritorio\js\wsp-bot-reminder\.wwebjs_auth\session\Default\Service Worker\Database/MANIFEST-000001

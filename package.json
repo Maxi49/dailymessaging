@@ -1,12 +1,26 @@
 {
+  "name": "wsp-bot-reminder",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Maxi49/dailymessaging#readme",
+  "bugs": {
+    "url": "https://github.com/Maxi49/dailymessaging/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maxi49/dailymessaging.git"
+  },
+  "license": "ISC",
+  "author": "frame",
+  "type": "commonjs",
+  "main": "main.ts",
+  "scripts": {
+    "dev": "node main.js"
+  },
   "dependencies": {
     "node-cron": "^4.2.1",
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.34.2"
-  },
-  "scripts": {
-    "dev": "npm run app/main.ts",
-    "start": "bun run app/main.ts"
   },
   "devDependencies": {
     "@types/qrcode-terminal": "^0.12.2"
