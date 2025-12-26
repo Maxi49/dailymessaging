@@ -43,7 +43,7 @@ function programarMensajeDiario(sock) {
   function programar() {
     const ahora = new Date();
     const objetivo = new Date();
-    objetivo.setHours(15, 25, 0, 0); // Tu hora
+    objetivo.setHours(22, 30, 0, 0); // Tu hora
     
     if (ahora > objetivo) {
       objetivo.setDate(objetivo.getDate() + 1);
