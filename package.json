@@ -5,6 +5,7 @@
     "whatsapp-web.js": "^1.34.2"
   },
   "scripts": {
+    "dev": "npm run app/main.ts",
     "start": "bun run app/main.ts"
   },
   "devDependencies": {
