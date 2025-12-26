@@ -1,43 +1,74 @@
-const Client = require('whatsapp-web.js').Client;
-const LocalAuth = require('whatsapp-web.js').LocalAuth;
-
+const makeWASocket = require('@whiskeysockets/baileys').default;
+const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
-const cron = require('node-cron');
 
-const phoneNumber = `${process.env.PHONE_NUMBER}@c.us`;
+async function connectToWhatsApp() {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
-const messages = [
-    'Recordá tomar la pastilla mi amor ❤️',
-    'Hora de la pastilla amor 💕',
-    'Pastillita del día mi chiquita preshiosha (yo te amo mas)❣️',
-    'No te olvides la pastilla my loveshito 💘'
-];
+  const sock = makeWASocket({
+    auth: state
+  });
 
-const client = new Client({
-    authStrategy: new LocalAuth()
-});
+  sock.ev.on('creds.update', saveCreds);
 
-client.on('qr', (qr) => {
-    // Escaneás esto con el WhatsApp de tu celu
-    qrcode.generate(qr, {small: true});
-    console.log('Escaneá el QR con tu WhatsApp');
-});
-
-client.on('ready', () => {
-    console.log('Bot listo!');
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect, qr } = update;
     
-    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    if (qr) {
+      console.log('Escaneá el QR con tu WhatsApp');
+      qrcode.generate(qr, { small: true });
+    }
 
-    cron.schedule('30 22 * * *', async () => {
-        console.log('Cron ejecutándose:', new Date().toLocaleString());
-        
-        try {
-            await client.sendMessage(phoneNumber, randomMessage);
-            console.log('Mensaje enviado!');
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    });
-});
+    if (connection === 'close') {
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      console.log('Conexión cerrada, reconectando...', shouldReconnect);
+      if (shouldReconnect) {
+        connectToWhatsApp();
+      }
+    } else if (connection === 'open') {
+      console.log('Bot listo!');
+      programarMensajeDiario(sock);
+    }
+  });
+}
 
-client.initialize();
+function programarMensajeDiario(sock) {
+  const mensajes = [
+    'Recordá tomar la pastilla mi amor ❤️',
+    'La pastillita mi amor 💕',
+    'Pastillita del día mi my love 💘',
+    'No te olvides la pastilla mi chiquita hermosa y preciosa 💖',
+  ];
+  
+  function programar() {
+    const ahora = new Date();
+    const objetivo = new Date();
+    objetivo.setHours(15, 25, 0, 0); // Tu hora
+    
+    if (ahora > objetivo) {
+      objetivo.setDate(objetivo.getDate() + 1);
+    }
+    
+    const tiempoHasta = objetivo.getTime() - ahora.getTime();
+    
+    setTimeout(async () => {
+      const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
+      const mensaje = mensajes[Math.floor(Math.random() * mensajes.length)];
+      
+      try {
+        await sock.sendMessage(numero, { text: mensaje });
+        console.log('Mensaje enviado!', new Date().toLocaleString());
+      } catch (error) {
+        console.error('Error:', error);
+      }
+      
+      programar();
+    }, tiempoHasta);
+    
+    console.log(`Mensaje programado para: ${objetivo.toLocaleString()}`);
+  }
+  
+  programar();
+}
+
+connectToWhatsApp();
