@@ -1,22 +1,33 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
   const sock = makeWASocket({
-    auth: state
+    auth: state,
+    printQRInTerminal: false
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
-    
-    if (qr) {
-      console.log('Escaneá el QR con tu WhatsApp');
-      qrcode.generate(qr, { small: true });
+
+    // Pedir pairing code solo cuando se conecta y no está registrado
+    if (qr && !sock.authState.creds.registered) {
+      try {
+        const phoneNumber = process.env.MY_PHONE_NUMBER; // +5493512345678
+        const code = await sock.requestPairingCode(phoneNumber);
+        console.log('='.repeat(50));
+        console.log(`CÓDIGO DE VINCULACIÓN: ${code}`);
+        console.log('='.repeat(50));
+        console.log('Ingresá este código en WhatsApp:');
+        console.log('Dispositivos vinculados → Vincular con número de teléfono');
+        console.log('='.repeat(50));
+      } catch (error) {
+        console.error('Error al generar pairing code:', error.message);
+      }
     }
 
     if (connection === 'close') {
@@ -43,7 +54,7 @@ function programarMensajeDiario(sock) {
   function programar() {
     const ahora = new Date();
     const objetivo = new Date();
-    objetivo.setHours(22, 30, 0, 0); // Tu hora
+    objetivo.setHours(22, 30, 0, 0);
     
     if (ahora > objetivo) {
       objetivo.setDate(objetivo.getDate() + 1);
