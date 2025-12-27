@@ -68,21 +68,21 @@ function programarMensajeDiario(sock) {
   ];
 
   function programar() {
-    // Obtener la hora actual en Argentina (UTC-3)
+    // Obtener la hora actual
     const ahora = new Date();
-    const ahoraArgentina = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
 
-    // Crear objetivo para las 22:30 en Argentina
-    const objetivo = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
-    objetivo.setHours(22, 30, 0, 0);
+    // Crear la fecha objetivo para las 22:30 hora Argentina
+    // Argentina está en UTC-3, entonces 22:30 ART = 01:30 UTC del día siguiente
+    const objetivo = new Date();
+    objetivo.setUTCHours(1, 30, 0, 0); // 22:30 Argentina = 01:30 UTC
 
-    // Si ya pasó las 22:30 de hoy, programar para mañana
-    if (ahoraArgentina > objetivo) {
-      objetivo.setDate(objetivo.getDate() + 1);
+    // Si ya pasó la hora objetivo de hoy, programar para mañana
+    if (ahora.getTime() >= objetivo.getTime()) {
+      objetivo.setUTCDate(objetivo.getUTCDate() + 1);
     }
 
     // Calcular el tiempo hasta el envío
-    const tiempoHasta = objetivo.getTime() - ahoraArgentina.getTime();
+    const tiempoHasta = objetivo.getTime() - ahora.getTime();
 
     setTimeout(async () => {
       const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
@@ -101,6 +101,7 @@ function programarMensajeDiario(sock) {
 
     const horaObjetivo = objetivo.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
     console.log(`Mensaje programado para: ${horaObjetivo} (hora Argentina)`);
+    console.log(`Tiempo hasta envío: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
   }
 
   programar();
