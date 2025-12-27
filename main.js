@@ -4,6 +4,7 @@ const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/bai
 const qrcode = require('qrcode'); // npm install qrcode
 
 async function connectToWhatsApp() {
+  console.log('Iniciando bot de WhatsApp...');
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
   const sock = makeWASocket({
