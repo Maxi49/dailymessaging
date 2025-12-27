@@ -1,10 +1,17 @@
 require('dotenv').config();
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode'); // npm install qrcode
+const qrcode = require('qrcode');
+const cloudinary = require('cloudinary').v2;
+
+// Configurar Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 async function connectToWhatsApp() {
-  console.log('Iniciando bot de WhatsApp...');
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
   const sock = makeWASocket({
@@ -18,9 +25,25 @@ async function connectToWhatsApp() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      // Guardar QR como imagen
-      await qrcode.toFile('./qr.png', qr);
-      console.log('QR guardado en qr.png - Abrilo y escanealo!');
+      try {
+        // Guardar QR localmente
+        await qrcode.toFile('./qr.png', qr);
+        
+        // Subir a Cloudinary
+        const result = await cloudinary.uploader.upload('./qr.png', {
+          folder: 'whatsapp-bot',
+          public_id: 'qr-' + Date.now()
+        });
+        
+        console.log('='.repeat(60));
+        console.log('QR CODE URL:');
+        console.log(result.secure_url);
+        console.log('='.repeat(60));
+        console.log('Abrí ese link y escaneá el QR!');
+        console.log('='.repeat(60));
+      } catch (error) {
+        console.error('Error subiendo QR:', error.message);
+      }
     }
 
     if (connection === 'close') {
@@ -35,6 +58,7 @@ async function connectToWhatsApp() {
     }
   });
 }
+
 function programarMensajeDiario(sock) {
   const mensajes = [
     'Recordá tomar la pastilla mi amor ❤️',
