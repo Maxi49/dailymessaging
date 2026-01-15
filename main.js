@@ -213,20 +213,29 @@ function programarMensajeDiario(sock) {
   ];
 
   function programar() {
-    // Obtener la hora actual
     const ahora = new Date();
-
-    // Crear la fecha objetivo para las 22:30 hora Argentina
-    // Argentina está en UTC-3, entonces 22:30 ART = 01:30 UTC del día siguiente
+    
+    // Hora objetivo: 23:00 Argentina (TEST)
+    // Argentina = UTC-3, entonces 23:00 Argentina = 02:00 UTC del día siguiente
+    // Usamos offset de -3 horas (Argentina)
+    const HORA_MENSAJE = 23;
+    const MINUTO_MENSAJE = 0;
+    
+    // Calcular la hora objetivo en Argentina
+    const argentinaOffset = -3 * 60; // -3 horas en minutos
+    const localOffset = ahora.getTimezoneOffset(); // offset local en minutos
+    const diffMinutes = argentinaOffset - (-localOffset); // diferencia entre local y Argentina
+    
+    // Crear objetivo como hora local y ajustar
     const objetivo = new Date();
-    objetivo.setUTCHours(2, 0, 0, 0); // 23:00 Argentina = 02:00 UTC
-
+    objetivo.setHours(HORA_MENSAJE, MINUTO_MENSAJE, 0, 0);
+    objetivo.setMinutes(objetivo.getMinutes() - diffMinutes);
+    
     // Si ya pasó la hora objetivo de hoy, programar para mañana
     if (ahora.getTime() >= objetivo.getTime()) {
-      objetivo.setUTCDate(objetivo.getUTCDate() + 1);
+      objetivo.setDate(objetivo.getDate() + 1);
     }
 
-    // Calcular el tiempo hasta el envío
     const tiempoHasta = objetivo.getTime() - ahora.getTime();
 
     setTimeout(async () => {
