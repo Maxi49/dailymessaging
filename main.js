@@ -17,8 +17,9 @@ let isSocketOpen = false;
 let shouldAutoReconnect = true; // Controla si debe reconectar automáticamente
 
 // Horarios de conexión (hora Argentina, UTC-3)
-const HORA_ABRIR = { hora: 22, minuto: 25 };  // 22:25 Argentina = 01:25 UTC
-const HORA_CERRAR = { hora: 22, minuto: 35 }; // 22:35 Argentina = 01:35 UTC
+// TEST: Abrir 22:59, Mensaje 23:00, Cerrar 23:01
+const HORA_ABRIR = { hora: 22, minuto: 59 };  // 22:59 Argentina
+const HORA_CERRAR = { hora: 23, minuto: 1 };  // 23:01 Argentina
 
 /**
  * Obtiene la hora actual en Argentina
@@ -130,27 +131,37 @@ async function openSocket() {
 
 /**
  * Cierra el socket sin hacer logout
+ * Usa sock.ws.close() en lugar de sock.end() para preservar las credenciales
  */
 function closeSocket() {
-  if (!isSocketOpen || !currentSock) {
+  if (!currentSock) {
     console.log('El socket ya está cerrado.');
     return;
   }
 
   console.log('='.repeat(60));
-  console.log('Cerrando socket...');
+  console.log('Cerrando socket (preservando sesión)...');
   console.log('Hora Argentina:', getArgentinaTime().toLocaleString('es-AR'));
   console.log('='.repeat(60));
 
   // Desactivar reconexión automática antes de cerrar
   shouldAutoReconnect = false;
   
-  // Cerrar el socket sin hacer logout
-  currentSock.end();
+  try {
+    // Cerrar solo el WebSocket, NO usar sock.end() que puede invalidar la sesión
+    // sock.ws.close() cierra la conexión pero mantiene las credenciales válidas
+    if (currentSock.ws) {
+      currentSock.ws.close();
+    }
+  } catch (error) {
+    console.log('Error al cerrar WebSocket:', error.message);
+  }
+  
   currentSock = null;
   isSocketOpen = false;
 
   console.log('Socket cerrado correctamente. La sesión de WhatsApp sigue activa.');
+  console.log('Las credenciales están guardadas en auth_info_baileys/');
   
   // Programar la próxima apertura del socket
   programarAperturaSocket();
@@ -208,7 +219,7 @@ function programarMensajeDiario(sock) {
     // Crear la fecha objetivo para las 22:30 hora Argentina
     // Argentina está en UTC-3, entonces 22:30 ART = 01:30 UTC del día siguiente
     const objetivo = new Date();
-    objetivo.setUTCHours(1, 30, 0, 0); // 22:30 Argentina = 01:30 UTC
+    objetivo.setUTCHours(2, 0, 0, 0); // 23:00 Argentina = 02:00 UTC
 
     // Si ya pasó la hora objetivo de hoy, programar para mañana
     if (ahora.getTime() >= objetivo.getTime()) {
