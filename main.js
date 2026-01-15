@@ -212,31 +212,13 @@ function programarMensajeDiario(sock) {
     'No te olvides la pastilla mi chiquita hermosa y preciosa 💖',
   ];
 
-  function programar() {
-    const ahora = new Date();
-    
-    // Hora objetivo: 23:00 Argentina (TEST)
-    // Argentina = UTC-3, entonces 23:00 Argentina = 02:00 UTC del día siguiente
-    // Usamos offset de -3 horas (Argentina)
-    const HORA_MENSAJE = 23;
-    const MINUTO_MENSAJE = 0;
-    
-    // Calcular la hora objetivo en Argentina
-    const argentinaOffset = -3 * 60; // -3 horas en minutos
-    const localOffset = ahora.getTimezoneOffset(); // offset local en minutos
-    const diffMinutes = argentinaOffset - (-localOffset); // diferencia entre local y Argentina
-    
-    // Crear objetivo como hora local y ajustar
-    const objetivo = new Date();
-    objetivo.setHours(HORA_MENSAJE, MINUTO_MENSAJE, 0, 0);
-    objetivo.setMinutes(objetivo.getMinutes() - diffMinutes);
-    
-    // Si ya pasó la hora objetivo de hoy, programar para mañana
-    if (ahora.getTime() >= objetivo.getTime()) {
-      objetivo.setDate(objetivo.getDate() + 1);
-    }
+  // TEST: Mensaje a las 23:00 Argentina
+  const HORA_MENSAJE = 23;
+  const MINUTO_MENSAJE = 0;
 
-    const tiempoHasta = objetivo.getTime() - ahora.getTime();
+  function programar() {
+    // Usar la misma función que funciona para el socket
+    const tiempoHasta = getMsUntilArgentinaTime(HORA_MENSAJE, MINUTO_MENSAJE);
 
     setTimeout(async () => {
       const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
@@ -253,8 +235,7 @@ function programarMensajeDiario(sock) {
       programar();
     }, tiempoHasta);
 
-    const horaObjetivo = objetivo.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-    console.log(`Mensaje programado para: ${horaObjetivo} (hora Argentina)`);
+    console.log(`Mensaje programado para: ${HORA_MENSAJE}:${MINUTO_MENSAJE.toString().padStart(2, '0')} (hora Argentina)`);
     console.log(`Tiempo hasta envío: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
   }
 
