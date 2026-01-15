@@ -22,28 +22,42 @@ const HORA_ABRIR = { hora: 22, minuto: 59 };  // 22:59 Argentina
 const HORA_CERRAR = { hora: 23, minuto: 1 };  // 23:01 Argentina
 
 /**
- * Obtiene la hora actual en Argentina
+ * Obtiene la hora actual en Argentina (UTC-3)
  */
 function getArgentinaTime() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  const ahora = new Date();
+  // Argentina = UTC - 3 horas
+  const argentinaOffset = 3 * 60 * 60 * 1000; // 3 horas en ms
+  return new Date(ahora.getTime() - argentinaOffset);
 }
 
 /**
  * Calcula milisegundos hasta una hora específica de Argentina
+ * Usa un método robusto que evita problemas con overflow de horas
  */
 function getMsUntilArgentinaTime(hora, minuto) {
   const ahora = new Date();
   
-  // Crear fecha objetivo en UTC (Argentina = UTC-3)
-  const objetivo = new Date();
-  objetivo.setUTCHours(hora + 3, minuto, 0, 0); // Convertir hora Argentina a UTC
+  // Argentina = UTC - 3 horas
+  const argentinaOffset = 3 * 60 * 60 * 1000; // 3 horas en ms
   
-  // Si ya pasó la hora objetivo de hoy, programar para mañana
-  if (ahora.getTime() >= objetivo.getTime()) {
-    objetivo.setUTCDate(objetivo.getUTCDate() + 1);
+  // Crear una fecha "virtual" que representa la hora actual en Argentina
+  // (los valores UTC de esta fecha representan la hora Argentina)
+  const ahoraArgentina = new Date(ahora.getTime() - argentinaOffset);
+  
+  // Crear el objetivo en el mismo "marco" Argentina
+  const objetivoArgentina = new Date(ahoraArgentina);
+  objetivoArgentina.setUTCHours(hora, minuto, 0, 0);
+  
+  // Si ya pasó la hora objetivo hoy (en Argentina), programar para mañana
+  if (ahoraArgentina.getTime() >= objetivoArgentina.getTime()) {
+    objetivoArgentina.setUTCDate(objetivoArgentina.getUTCDate() + 1);
   }
   
-  return objetivo.getTime() - ahora.getTime();
+  // Convertir de vuelta a UTC real sumando el offset
+  const objetivoUTC = new Date(objetivoArgentina.getTime() + argentinaOffset);
+  
+  return objetivoUTC.getTime() - ahora.getTime();
 }
 
 /**
