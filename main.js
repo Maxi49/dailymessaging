@@ -17,9 +17,9 @@ let isSocketOpen = false;
 let shouldAutoReconnect = true; // Controla si debe reconectar automáticamente
 
 // Horarios de conexión (hora Argentina, UTC-3)
-// TEST: Abrir 22:59, Mensaje 23:00, Cerrar 23:01
-const HORA_ABRIR = { hora: 22, minuto: 59 };  // 22:59 Argentina
-const HORA_CERRAR = { hora: 23, minuto: 1 };  // 23:01 Argentina
+// Socket abre 22:29, Mensaje 22:30, Socket cierra 22:31
+const HORA_ABRIR = { hora: 22, minuto: 29 };  // 22:29 Argentina
+const HORA_CERRAR = { hora: 22, minuto: 31 }; // 22:31 Argentina
 
 /**
  * Obtiene la hora actual en Argentina (UTC-3)
@@ -226,9 +226,9 @@ function programarMensajeDiario(sock) {
     'No te olvides la pastilla mi chiquita hermosa y preciosa 💖',
   ];
 
-  // TEST: Mensaje a las 23:00 Argentina
-  const HORA_MENSAJE = 23;
-  const MINUTO_MENSAJE = 0;
+  // Mensaje a las 22:30 Argentina
+  const HORA_MENSAJE = 22;
+  const MINUTO_MENSAJE = 30;
 
   function programar() {
     // Usar la misma función que funciona para el socket
