@@ -11,24 +11,51 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+const ARG_TZ = 'America/Argentina/Buenos_Aires';
+const ARG_UTC_OFFSET_HOURS = -3;
+
 // Variables globales para control del socket
 let currentSock = null;
 let isSocketOpen = false;
 let shouldAutoReconnect = true; // Controla si debe reconectar automáticamente
+let openTimeoutId = null;
+let closeTimeoutId = null;
+let messageTimeoutId = null;
 
 // Horarios de conexión (hora Argentina, UTC-3)
-// Socket abre 22:29, Mensaje 22:30, Socket cierra 22:31
-const HORA_ABRIR = { hora: 22, minuto: 29 };  // 22:29 Argentina
-const HORA_CERRAR = { hora: 22, minuto: 31 }; // 22:31 Argentina
+// Socket abre 22:25, Mensaje 22:30, Socket cierra 22:35
+const HORA_ABRIR = { hora: 22, minuto: 25 };  // 22:25 Argentina
+const HORA_MENSAJE = { hora: 22, minuto: 30 }; // 22:30 Argentina
+const HORA_CERRAR = { hora: 22, minuto: 35 }; // 22:35 Argentina
 
 /**
  * Obtiene la hora actual en Argentina (UTC-3)
  */
-function getArgentinaTime() {
-  const ahora = new Date();
-  // Argentina = UTC - 3 horas
-  const argentinaOffset = 3 * 60 * 60 * 1000; // 3 horas en ms
-  return new Date(ahora.getTime() - argentinaOffset);
+function getArgentinaTimeString() {
+  return new Date().toLocaleString('es-AR', { timeZone: ARG_TZ });
+}
+
+function getArgentinaTimeParts(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARG_TZ,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const parts = formatter.formatToParts(date);
+  let hour = 0;
+  let minute = 0;
+
+  for (const part of parts) {
+    if (part.type === 'hour') {
+      hour = Number(part.value);
+    } else if (part.type === 'minute') {
+      minute = Number(part.value);
+    }
+  }
+
+  return { hour, minute };
 }
 
 /**
@@ -37,33 +64,31 @@ function getArgentinaTime() {
  */
 function getMsUntilArgentinaTime(hora, minuto) {
   const ahora = new Date();
-  
-  // Argentina = UTC - 3 horas
-  const argentinaOffset = 3 * 60 * 60 * 1000; // 3 horas en ms
-  
-  // Crear una fecha "virtual" que representa la hora actual en Argentina
-  // (los valores UTC de esta fecha representan la hora Argentina)
-  const ahoraArgentina = new Date(ahora.getTime() - argentinaOffset);
-  
-  // Crear el objetivo en el mismo "marco" Argentina
-  const objetivoArgentina = new Date(ahoraArgentina);
-  objetivoArgentina.setUTCHours(hora, minuto, 0, 0);
-  
-  // Si ya pasó la hora objetivo hoy (en Argentina), programar para mañana
-  if (ahoraArgentina.getTime() >= objetivoArgentina.getTime()) {
-    objetivoArgentina.setUTCDate(objetivoArgentina.getUTCDate() + 1);
+  const objetivoUTC = new Date(ahora);
+  const utcHour = hora - ARG_UTC_OFFSET_HOURS;
+
+  objetivoUTC.setUTCHours(utcHour, minuto, 0, 0);
+
+  // Si ya paso la hora objetivo hoy (en Argentina), programar para manana
+  if (objetivoUTC.getTime() <= ahora.getTime()) {
+    objetivoUTC.setUTCDate(objetivoUTC.getUTCDate() + 1);
   }
-  
-  // Convertir de vuelta a UTC real sumando el offset
-  const objetivoUTC = new Date(objetivoArgentina.getTime() + argentinaOffset);
-  
+
   return objetivoUTC.getTime() - ahora.getTime();
+}
+
+function clearScheduledTimeout(timeoutId) {
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId);
+  }
+  return null;
 }
 
 /**
  * Abre el socket de WhatsApp
  */
 async function openSocket() {
+  openTimeoutId = clearScheduledTimeout(openTimeoutId);
   if (isSocketOpen) {
     console.log('El socket ya está abierto.');
     return currentSock;
@@ -71,7 +96,7 @@ async function openSocket() {
 
   console.log('='.repeat(60));
   console.log('Abriendo socket...');
-  console.log('Hora Argentina:', getArgentinaTime().toLocaleString('es-AR'));
+  console.log('Hora Argentina:', getArgentinaTimeString());
   console.log('='.repeat(60));
 
   shouldAutoReconnect = true;
@@ -113,6 +138,8 @@ async function openSocket() {
 
     if (connection === 'close') {
       isSocketOpen = false;
+      messageTimeoutId = clearScheduledTimeout(messageTimeoutId);
+      closeTimeoutId = clearScheduledTimeout(closeTimeoutId);
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const isLoggedOut = statusCode === DisconnectReason.loggedOut;
       
@@ -129,7 +156,7 @@ async function openSocket() {
       isSocketOpen = true;
       console.log('='.repeat(60));
       console.log('Socket abierto y listo!');
-      console.log('Hora Argentina:', getArgentinaTime().toLocaleString('es-AR'));
+      console.log('Hora Argentina:', getArgentinaTimeString());
       console.log('='.repeat(60));
       
       // Programar el mensaje diario
@@ -155,11 +182,13 @@ function closeSocket() {
 
   console.log('='.repeat(60));
   console.log('Cerrando socket (preservando sesión)...');
-  console.log('Hora Argentina:', getArgentinaTime().toLocaleString('es-AR'));
+  console.log('Hora Argentina:', getArgentinaTimeString());
   console.log('='.repeat(60));
 
   // Desactivar reconexión automática antes de cerrar
   shouldAutoReconnect = false;
+  messageTimeoutId = clearScheduledTimeout(messageTimeoutId);
+  closeTimeoutId = clearScheduledTimeout(closeTimeoutId);
   
   try {
     // Cerrar solo el WebSocket, NO usar sock.end() que puede invalidar la sesión
@@ -193,7 +222,9 @@ function programarAperturaSocket() {
   console.log(`Próxima apertura de socket: ${HORA_ABRIR.hora}:${HORA_ABRIR.minuto.toString().padStart(2, '0')} (hora Argentina)`);
   console.log(`Tiempo hasta apertura: ${horasHastaAbrir} horas y ${minutosHastaAbrir} minutos`);
 
-  setTimeout(() => {
+  openTimeoutId = clearScheduledTimeout(openTimeoutId);
+  openTimeoutId = setTimeout(() => {
+    openTimeoutId = null;
     openSocket();
   }, msHastaAbrir);
 }
@@ -203,6 +234,7 @@ function programarAperturaSocket() {
  */
 function programarCierreSocket() {
   const msHastaCerrar = getMsUntilArgentinaTime(HORA_CERRAR.hora, HORA_CERRAR.minuto);
+  closeTimeoutId = clearScheduledTimeout(closeTimeoutId);
   
   // Solo programar si el cierre es en menos de 24 horas (o sea, es hoy)
   // Esto evita programar el cierre para mañana cuando acabamos de abrir
@@ -212,7 +244,8 @@ function programarCierreSocket() {
     console.log(`Socket se cerrará a las ${HORA_CERRAR.hora}:${HORA_CERRAR.minuto.toString().padStart(2, '0')} (hora Argentina)`);
     console.log(`Tiempo hasta cierre: ${Math.floor(minutosHastaCerrar)} minutos`);
 
-    setTimeout(() => {
+    closeTimeoutId = setTimeout(() => {
+      closeTimeoutId = null;
       closeSocket();
     }, msHastaCerrar);
   }
@@ -226,34 +259,29 @@ function programarMensajeDiario(sock) {
     'No te olvides la pastilla mi chiquita hermosa y preciosa 💖',
   ];
 
-  // Mensaje a las 22:30 Argentina
-  const HORA_MENSAJE = 22;
-  const MINUTO_MENSAJE = 30;
+  const tiempoHasta = getMsUntilArgentinaTime(HORA_MENSAJE.hora, HORA_MENSAJE.minuto);
+  messageTimeoutId = clearScheduledTimeout(messageTimeoutId);
+  messageTimeoutId = setTimeout(async () => {
+    messageTimeoutId = null;
+    const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
+    const mensaje = mensajes[Math.floor(Math.random() * mensajes.length)];
 
-  function programar() {
-    // Usar la misma función que funciona para el socket
-    const tiempoHasta = getMsUntilArgentinaTime(HORA_MENSAJE, MINUTO_MENSAJE);
+    if (!isSocketOpen) {
+      console.log('Socket cerrado. Se omite el envio de mensaje.');
+      return;
+    }
 
-    setTimeout(async () => {
-      const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
-      const mensaje = mensajes[Math.floor(Math.random() * mensajes.length)];
+    try {
+      await sock.sendMessage(numero, { text: mensaje });
+      const horaEnvio = new Date().toLocaleString('es-AR', { timeZone: ARG_TZ });
+      console.log('Mensaje enviado!', horaEnvio);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }, tiempoHasta);
 
-      try {
-        await sock.sendMessage(numero, { text: mensaje });
-        const horaEnvio = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-        console.log('Mensaje enviado!', horaEnvio);
-      } catch (error) {
-        console.error('Error:', error);
-      }
-
-      programar();
-    }, tiempoHasta);
-
-    console.log(`Mensaje programado para: ${HORA_MENSAJE}:${MINUTO_MENSAJE.toString().padStart(2, '0')} (hora Argentina)`);
-    console.log(`Tiempo hasta envío: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
-  }
-
-  programar();
+  console.log(`Mensaje programado para: ${HORA_MENSAJE.hora}:${HORA_MENSAJE.minuto.toString().padStart(2, '0')} (hora Argentina)`);
+  console.log(`Tiempo hasta envio: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
 }
 
 /**
@@ -265,7 +293,7 @@ async function main() {
   console.log('Sistema de WhatsApp Bot con Socket Programado');
   console.log('='.repeat(60));
   console.log(`Horario de conexión: ${HORA_ABRIR.hora}:${HORA_ABRIR.minuto.toString().padStart(2, '0')} - ${HORA_CERRAR.hora}:${HORA_CERRAR.minuto.toString().padStart(2, '0')} (Argentina)`);
-  console.log('Hora actual Argentina:', getArgentinaTime().toLocaleString('es-AR'));
+  console.log('Hora actual Argentina:', getArgentinaTimeString());
   console.log('='.repeat(60));
 
   // Siempre abrir el socket al inicio para permitir escanear QR si es necesario
@@ -275,9 +303,7 @@ async function main() {
   // Esperar a que la conexión se establezca
   await new Promise(resolve => setTimeout(resolve, 5000));
 
-  const argentinaTime = getArgentinaTime();
-  const horaActual = argentinaTime.getHours();
-  const minutoActual = argentinaTime.getMinutes();
+  const { hour: horaActual, minute: minutoActual } = getArgentinaTimeParts();
 
   // Verificar si estamos dentro del horario de conexión (22:25 - 22:35)
   const dentroDeHorario = 
