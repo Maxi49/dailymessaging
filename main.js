@@ -21,6 +21,7 @@ let shouldAutoReconnect = true; // Controla si debe reconectar automáticamente
 let openTimeoutId = null;
 let closeTimeoutId = null;
 let messageTimeoutId = null;
+let lastSentDateKey = null;
 
 // Horarios de conexión (hora Argentina, UTC-3)
 // Socket abre 22:25, Mensaje 22:30, Socket cierra 22:35
@@ -82,6 +83,26 @@ function clearScheduledTimeout(timeoutId) {
     clearTimeout(timeoutId);
   }
   return null;
+}
+
+function getArgentinaDateKey(date = new Date()) {
+  return date.toLocaleDateString('en-CA', { timeZone: ARG_TZ });
+}
+
+function getArgentinaMinutesOfDay(date = new Date()) {
+  const { hour, minute } = getArgentinaTimeParts(date);
+  return hour * 60 + minute;
+}
+
+function isWithinMessageWindow(date = new Date()) {
+  const minutosActuales = getArgentinaMinutesOfDay(date);
+  const inicio = HORA_MENSAJE.hora * 60 + HORA_MENSAJE.minuto;
+  const fin = HORA_CERRAR.hora * 60 + HORA_CERRAR.minuto;
+  return minutosActuales >= inicio && minutosActuales <= fin;
+}
+
+function isSocketReady(sock) {
+  return Boolean(sock && sock.ws && sock.ws.readyState === 1);
 }
 
 /**
@@ -259,29 +280,63 @@ function programarMensajeDiario(sock) {
     'No te olvides la pastilla mi chiquita hermosa y preciosa 💖',
   ];
 
-  const tiempoHasta = getMsUntilArgentinaTime(HORA_MENSAJE.hora, HORA_MENSAJE.minuto);
+  const hoyKey = getArgentinaDateKey();
+  const yaEnviadoHoy = lastSentDateKey === hoyKey;
+  const dentroDeVentana = isWithinMessageWindow();
+  let tiempoHasta = getMsUntilArgentinaTime(HORA_MENSAJE.hora, HORA_MENSAJE.minuto);
+
+  if (dentroDeVentana && !yaEnviadoHoy) {
+    tiempoHasta = 2000;
+  }
+
+  const programarReintento = (delayMs) => {
+    messageTimeoutId = clearScheduledTimeout(messageTimeoutId);
+    messageTimeoutId = setTimeout(() => {
+      messageTimeoutId = null;
+      programarMensajeDiario(sock);
+    }, delayMs);
+  };
+
   messageTimeoutId = clearScheduledTimeout(messageTimeoutId);
   messageTimeoutId = setTimeout(async () => {
     messageTimeoutId = null;
     const numero = process.env.PHONE_NUMBER + '@s.whatsapp.net';
     const mensaje = mensajes[Math.floor(Math.random() * mensajes.length)];
+    const ahoraKey = getArgentinaDateKey();
 
-    if (!isSocketOpen) {
-      console.log('Socket cerrado. Se omite el envio de mensaje.');
+    if (lastSentDateKey === ahoraKey) {
+      console.log('Mensaje ya enviado hoy. No se envia otra vez.');
+      return;
+    }
+
+    if (!isWithinMessageWindow()) {
+      console.log('Fuera de ventana de envio. Se programa para el proximo dia.');
+      return;
+    }
+
+    if (!isSocketReady(sock)) {
+      console.log('Socket no listo. Reintentando en 15 segundos...');
+      programarReintento(15000);
       return;
     }
 
     try {
       await sock.sendMessage(numero, { text: mensaje });
+      lastSentDateKey = ahoraKey;
       const horaEnvio = new Date().toLocaleString('es-AR', { timeZone: ARG_TZ });
       console.log('Mensaje enviado!', horaEnvio);
     } catch (error) {
       console.error('Error:', error);
+      programarReintento(15000);
     }
   }, tiempoHasta);
 
-  console.log(`Mensaje programado para: ${HORA_MENSAJE.hora}:${HORA_MENSAJE.minuto.toString().padStart(2, '0')} (hora Argentina)`);
-  console.log(`Tiempo hasta envio: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
+  if (dentroDeVentana && !yaEnviadoHoy) {
+    console.log('Dentro de la ventana de envio. Intento de mensaje en breve...');
+  } else {
+    console.log(`Mensaje programado para: ${HORA_MENSAJE.hora}:${HORA_MENSAJE.minuto.toString().padStart(2, '0')} (hora Argentina)`);
+    console.log(`Tiempo hasta envio: ${Math.floor(tiempoHasta / 1000 / 60 / 60)} horas y ${Math.floor((tiempoHasta / 1000 / 60) % 60)} minutos`);
+  }
 }
 
 /**
